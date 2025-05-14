@@ -145,14 +145,18 @@ $result = $conn->query($query);
     </div>
 </div>
     <div class="content-header d-flex justify-content-between align-items-center">
+
       <h1>Data Siswa</h1>
       <a href="tambah-siswa.php" class="btn btn-warning ">
         <i class="fas fa-plus"></i>Tambah Siswa</a>
     </div>
     <div class="content">
+    <form method="POST" action="cetak-pilih-kartu.php" target="_blank">
+    <button type="submit" class="btn btn-primary mb-3">Cetak Kartu yang Dipilih</button>
       <table class="table table-bordered table-hover bg-white">
         <thead class="thead-dark">
           <tr>
+          <th><input type="checkbox" id="checkAll"></th>
             <th>#</th>
             <th>NIS</th>
             <th>Nama</th>
@@ -166,6 +170,9 @@ $result = $conn->query($query);
           $no = 1;
           while ($row = $result->fetch_assoc()) {
               echo "<tr>
+
+               <td><input type='checkbox' name='ids[]' value='{$row['id']}'></td>
+               
                 <td>{$no}</td>
                 <td>{$row['nis']}</td>
                 <td>{$row['nama']}</td>
@@ -183,6 +190,7 @@ $result = $conn->query($query);
           ?>
         </tbody>
       </table>
+    </form>
     </div>
   </div>
 
@@ -197,5 +205,14 @@ $result = $conn->query($query);
 <script src="assets/AdminLTE/plugins/jquery/jquery.min.js"></script>
 <script src="assets/AdminLTE/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="assets/AdminLTE/dist/js/adminlte.min.js"></script>
+<!-- Script untuk centang semua -->
+<script>
+document.getElementById("checkAll").onclick = function() {
+  let checkboxes = document.querySelectorAll('input[name="ids[]"]');
+  for (let checkbox of checkboxes) {
+    checkbox.checked = this.checked;
+  }
+};
+</script>
 </body>
 </html>
