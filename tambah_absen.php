@@ -45,8 +45,9 @@ if (isset($_POST['update'])) {
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && !isset($_POST['update'])) {
     $nis = $conn->real_escape_string($_POST['nis']);
-    $status = $conn->real_escape_string($_POST['status']);
-    $keterangan = $conn->real_escape_string($_POST['keterangan']);
+    // Make sure we get the actual status from the form
+    $status = isset($_POST['status']) ? $conn->real_escape_string($_POST['status']) : 'Hadir';
+    $keterangan = isset($_POST['keterangan']) ? $conn->real_escape_string($_POST['keterangan']) : '';
     
     // Get student ID from NIS
     $stmt = $conn->prepare("SELECT id FROM siswas WHERE nis = ?");
@@ -128,37 +129,81 @@ $stats = $stats_result->fetch_assoc();
 <body class="hold-transition sidebar-mini">
 <div class="wrapper">
 
- 
+  <!-- Navbar -->
+  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item">
+        <a class="nav-link" href="logout.php">Logout</a>
+      </li>
+    </ul>
+  </nav>
+
   <!-- Sidebar -->
-  <?php include 'sidebar.php'; ?>
+  <aside class="main-sidebar sidebar-dark-orange elevation-4">
+    <a href="#" class="brand-link">
+      <span class="brand-text font-weight-light">SMK Dashboard</span>
+    </a>
+    <div class="sidebar">
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview">
+          <li class="nav-item">
+            <a href="dashboard.php" class="nav-link">
+              <i class="nav-icon fas fa-tachometer-alt"></i>
+              <p>Dashboard</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="list-siswa.php" class="nav-link ">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Daftar Siswa</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="absen_siswa.php" class="nav-link active">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Absensi Siswa</p>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
   <!-- Content -->
   <div class="content-wrapper p-4">
     <div class="content-header">
       <h1>Data Absensi Siswa</h1>
-      
     </div>
     
     <!-- Add Input Form -->
-    <div class="card mb-4"  >
-      <h2 style="margin-left:20px; margin-top:20px;">Absen Siswa Dengan Barcode</h2>
+    <div class="card mb-4">
       <div class="card-body">
-      <form method="POST" class="row g-3" id="barcodeForm">
-        <div class="col-md-3">
-        <label class="form-label">NIS Siswa</label>
-        <input type="text" name="nis" class="form-control" required autofocus id="barcodeInput">
-        <input type="hidden" name="status" value="Hadir">
-        </div>
-        <div class="col-md-3">
-        <label class="form-label">&nbsp;</label>
-        <button type="submit" class="btn btn-primary w-100">Simpan Absen</button>
-      </div>
-      </form>
-      <div class="mt-3">
-        <a href="tambah_absen.php" class="btn btn-primary">Tambah Absen Manual</a>
-      </div>
+        <form method="POST" class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">NIS Siswa</label>
+            <input type="text" name="nis" class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-control" required>
+              <option value="Hadir">Hadir</option>
+              <option value="Sakit">Sakit</option>
+              <option value="Izin">Izin</option>
+              <option value="Alpha">Alpha</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Keterangan</label>
+            <input type="text" name="keterangan" class="form-control">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <button type="submit" class="btn btn-primary w-100">Simpan Absen</button>
+          </div>
+        </form>
       </div>
     </div>
-
+   
     <!-- Display Messages -->
     <?php if (isset($_SESSION['success'])): ?>
       <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -246,11 +291,23 @@ $stats = $stats_result->fetch_assoc();
                   <td>" . date('d-m-Y', strtotime($row['tanggal'])) . "</td>
                   <td>{$row['jam_masuk']}</td>
                   <td>{$row['nama']}</td>
-                  <td>{$row['status']}</td>
-                  <td>{$row['keterangan']}</td>
                   <td>
-                      <a href='edit_absen.php?id={$row['id']}' class='btn btn-sm btn-warning'>Edit</a>
-                      <a href='?delete={$row['id']}' class='btn btn-sm btn-danger' onclick='return confirm(\"Yakin ingin menghapus?\")'>Hapus</a>
+                    <form method='POST' style='display:inline;'>
+                      <input type='hidden' name='id' value='{$row['id']}'>
+                      <select name='status' class='form-control form-control-sm' style='width:auto;'>
+                        <option value='Hadir' ".($row['status'] == 'Hadir' ? 'selected' : '').">Hadir</option>
+                        <option value='Sakit' ".($row['status'] == 'Sakit' ? 'selected' : '').">Sakit</option>
+                        <option value='Izin' ".($row['status'] == 'Izin' ? 'selected' : '').">Izin</option>
+                        <option value='Alpha' ".($row['status'] == 'Alpha' ? 'selected' : '').">Alpha</option>
+                      </select>
+                  </td>
+                  <td>
+                      <input type='text' name='keterangan' value='{$row['keterangan']}' class='form-control form-control-sm'>
+                  </td>
+                  <td>
+                      <button type='submit' name='update' class='btn btn-sm btn-warning'>Update</button>
+                    </form>
+                    <a href='?delete={$row['id']}' class='btn btn-sm btn-danger' onclick='return confirm(\"Yakin ingin menghapus?\")'>Hapus</a>
                   </td>
               </tr>";
           }
@@ -271,26 +328,6 @@ $stats = $stats_result->fetch_assoc();
 <script src="assets/AdminLTE/plugins/jquery/jquery.min.js"></script>
 <script src="assets/AdminLTE/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="assets/AdminLTE/dist/js/adminlte.min.js"></script>
-<!-- <script>
-  // Ensure focus stays on the barcode input field
-  document.addEventListener('DOMContentLoaded', function() {
-    const barcodeInput = document.getElementById('barcodeInput');
-    
-    // Focus on page load
-    barcodeInput.focus();
-    
-    // Focus after form submission
-    document.getElementById('barcodeForm').addEventListener('submit', function() {
-      setTimeout(function() {
-        barcodeInput.focus();
-      }, 100);
-    });
-    
-    // Refocus when focus is lost
-    document.addEventListener('click', function() {
-      barcodeInput.focus();
-    });
-  });
-</script> -->
+
 </body>
 </html>
