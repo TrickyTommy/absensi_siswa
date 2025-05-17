@@ -93,6 +93,12 @@ $result = $conn->query($query);
               <p>Daftar Siswa</p>
             </a>
           </li>
+          <li class="nav-item">
+            <a href="absen_siswa.php" class="nav-link ">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Absensi Siswa</p>
+            </a>
+          </li>
         </ul>
       </nav>
     </div>

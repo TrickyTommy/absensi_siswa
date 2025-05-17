@@ -36,133 +36,144 @@ $result->data_seek(0);
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
-      
-        body {
-            font-family: 'Poppins', sans-serif;
-            background:rgb(245, 245, 245);
-            margin: 0;
-            padding: 20px;
-        }
 
-        .page {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            flex-wrap: wrap;
-            justify-content: space-around;
-            page-break-after: always;
-        }
+body {
+    font-family: 'Poppins', sans-serif;
+    background: rgb(245, 245, 245);
+    margin: 0;
+    padding: 20px;
+}
 
-        .card {
-            width: 5.5cm;
-            height: 8.5cm;
-            padding: 5px;
-            border-radius: 15px;
-            margin: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            position: relative;
-            overflow: hidden;
-            flex: 0 0 calc(33.333% - 20px);
-            background-image:url('assets/image/SMK.png');
-            background-size: cover;
-            background-position: center;
-        }
+.page {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    flex-wrap: wrap;
+    justify-content: space-around;
+    page-break-after: always;
+}
 
-        .student-info {
-            width: 100%;
-            display: grid;
-            grid-template-columns: 40% 60%;
-            grid-template-columns: 2;
-            background: #05a5f82e;
-            margin-bottom: 0px;
+.card {
+    width: 5.5cm;
+    height: 8.5cm;
+    padding: 5px;
+    border-radius: 15px;
+    margin: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    flex: 0 0 calc(33.333% - 20px);
+    background-image: url('assets/image/SMK.png');
+    background-size: cover;
+    background-position: center;
+    margin: 5px;
+    /* Remove margin since we're using grid gap */
+}
 
-        }
+.student-info {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 40% 60%;
+    grid-template-columns: 2;
+    background: #05a5f82e;
+    margin-bottom: 0px;
 
-        .info-row {
-            margin: 8px 0;
-            align-items: center;
-        }
+}
 
-        .info-row strong {
-            width: 80px;
-            color: #475569;
-            font-size: 12px;
-        }
+.info-row {
+    margin: 8px 0;
+    align-items: center;
+}
 
-        .info-row span {
-            color: #0f172a;
-            font-size: 10px;
-            font-weight: 500;
-            display: block;
-        }
+.info-row strong {
+    width: 80px;
+    color: #475569;
+    font-size: 12px;
+}
 
-        .box {
-            border: solid 2px black;
-            width: 2cm;
-            height: 3cm;
-        }
+.info-row span {
+    color: #0f172a;
+    font-size: 10px;
+    font-weight: 500;
+    display: block;
+}
 
-        .qr {
-            left: 40px;
-            top: 120px;
-            width: 150px;
-        }
+.box {
+    border: solid 2px black;
+    width: 2cm;
+    height: 3cm;
+}
 
-        .qr-code {
-                        margin-top: -10px; /* Add negative margin to move text up */
-            text-align: center;
-            border-radius: 10px;
-        }
+.qr {
+    left: 40px;
+    top: 120px;
+    width: 100px;
+    
+}
 
-        .qr-code img {
-            max-width: 100px;
-            height: auto;
-        }
+.qr-code {
+    margin-top: -12px;
+    /* Add negative margin to move text up */
+    text-align: center;
+    border-radius: 10px;
+}
 
-        .validity {
-            position: relative;
-            text-align: center;
-            font-size: 7px;
-            color: rgb(6 102 240);
-            bottom: -1px;
-        }
+.qr-code img {
+        max-width: 110px;
 
-        .tittle {
-            text-align: center;
-        }
+    height: auto;
+}
 
-        .tittle h2 {
-            margin: 5px 0;
-            font-size: 16px;
-        }
+.validity {
+    width: 100%;
+    text-align: center;
+    font-size: 7px;
+    color: rgb(8, 0, 255);
+    margin-top: -5px;
+    font-weight: 700;
+    bottom: -1px;
+}
 
-        .tittle h3 {
-            margin: 5px 0;
-            font-size: 12px;
-        }
+.tittle {
+    text-align: center;
+}
 
-        .scan {
-            margin-top: -5px; /* Add negative margin to move text up */
-            margin-bottom: 0px;
-            text-align: center;
-            font-size: 10px;
-            font-weight: 500;
-            color: rgb(6, 6, 6);
-        }
+.tittle h2 {
+    margin: 5px 0;
+    font-size: 16px;
+}
 
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-            }
-            .card {
-                box-shadow: none;
-                page-break-inside: avoid;
-            }
-            .no-print {
-                display: none;
-            }
-        }
-    </style>
+.tittle h3 {
+    margin: 5px 0;
+    font-size: 12px;
+}
+
+.scan {
+    margin-top: -5px;
+    /* Add negative margin to move text up */
+    margin-bottom: 0px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 500;
+    color: rgb(6, 6, 6);
+}
+
+@media print {
+    body {
+        background: white;
+        padding: 0;
+    }
+
+    .card {
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
+
+    .no-print {
+        display: none;
+    }
+}
+
+</style>
 </head>
 <body>
     <div class="page">
@@ -183,7 +194,7 @@ $result->data_seek(0);
                             <span><?= htmlspecialchars($siswa['nama']) ?></span>
                             <span><?= htmlspecialchars($siswa['kelas']) ?></span>
                             <span><?= htmlspecialchars($siswa['jurusan']) ?></span>
-                            <span>NISN/NIS : <?= htmlspecialchars($siswa['nisn']) ?></span>
+                            <span>NISN : <?= htmlspecialchars($siswa['nisn']) ?></span>
                         </div>
                     </div>
                 </div>
@@ -195,8 +206,7 @@ $result->data_seek(0);
                 </div>
 
                 <div class="validity">
-                    Kartu ini berlaku selama yang bersangkutan menjadi siswa<br>
-                    SMK BUDI MULIA KARAWANG
+                    
                 </div>
             </div>
         <?php endwhile; ?>

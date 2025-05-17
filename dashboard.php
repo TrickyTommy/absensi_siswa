@@ -63,6 +63,12 @@ $user = is_array($_SESSION['user']) ? $_SESSION['user'] : ['name' => $_SESSION['
               <p>Daftar Siswa</p>
             </a>
           </li>
+          <li class="nav-item">
+            <a href="absen_siswa.php" class="nav-link ">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Absensi Siswa</p>
+            </a>
+          </li>
           <!-- Tambahkan menu lain di sini -->
         </ul>
       </nav>
