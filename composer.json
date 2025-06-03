@@ -1,6 +1,7 @@
 {
     "require": {
         "picqer/php-barcode-generator": "^3.2",
-        "endroid/qr-code": "^6.0"
+        "endroid/qr-code": "^6.0",
+        "phpoffice/phpword": "^1.3"
     }
 }

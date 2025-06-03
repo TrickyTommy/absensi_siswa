@@ -10,6 +10,8 @@ class ComposerStaticInit906787304fff11015cfe879175918ee2
         'P' => 
         array (
             'Picqer\\Barcode\\' => 15,
+            'PhpOffice\\PhpWord\\' => 18,
+            'PhpOffice\\Math\\' => 15,
         ),
         'E' => 
         array (
@@ -29,6 +31,14 @@ class ComposerStaticInit906787304fff11015cfe879175918ee2
         'Picqer\\Barcode\\' => 
         array (
             0 => __DIR__ . '/..' . '/picqer/php-barcode-generator/src',
+        ),
+        'PhpOffice\\PhpWord\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phpoffice/phpword/src/PhpWord',
+        ),
+        'PhpOffice\\Math\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phpoffice/math/src/Math',
         ),
         'Endroid\\QrCode\\' => 
         array (

@@ -44,64 +44,88 @@ if (isset($_POST['update'])) {
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && !isset($_POST['update'])) {
-    $nis = $conn->real_escape_string($_POST['nis']);
-    // Make sure we get the actual status from the form
+    $nama_siswa = $conn->real_escape_string($_POST['nama_siswa']);
     $status = isset($_POST['status']) ? $conn->real_escape_string($_POST['status']) : 'Hadir';
     $keterangan = isset($_POST['keterangan']) ? $conn->real_escape_string($_POST['keterangan']) : '';
     
-    // Get student ID from NIS
-    $stmt = $conn->prepare("SELECT id FROM siswas WHERE nis = ?");
-    $stmt->bind_param("s", $nis);
+    // Validate if nama_siswa exists in database with COLLATE for case-insensitive comparison
+    $stmt = $conn->prepare("SELECT id FROM siswas WHERE nama COLLATE utf8mb4_general_ci = ?");
+    $stmt->bind_param("s", $nama_siswa);
     $stmt->execute();
     $result = $stmt->get_result();
     
-    if ($siswa = $result->fetch_assoc()) {
-        $siswa_id = $siswa['id'];
-        $tanggal = date('Y-m-d');
-        $jam_masuk = date('H:i:s'); // This will now use the correct timezone
-        
-        // Check if student already has attendance for today
-        $check = $conn->prepare("SELECT id FROM absensis WHERE siswa_id = ? AND tanggal = ?");
-        $check->bind_param("is", $siswa_id, $tanggal);
-        $check->execute();
-        $existing = $check->get_result();
-        
-        if ($existing->num_rows > 0) {
-            $_SESSION['error'] = "Siswa sudah diabsen hari ini";
-        } else {
-            $insert = $conn->prepare("INSERT INTO absensis (siswa_id, tanggal, jam_masuk, status, keterangan) VALUES (?, ?, ?, ?, ?)");
-            $insert->bind_param("issss", $siswa_id, $tanggal, $jam_masuk, $status, $keterangan);
-            
-            if ($insert->execute()) {
-                $_SESSION['success'] = "Absensi berhasil dicatat pada jam " . $jam_masuk;
-            } else {
-                $_SESSION['error'] = "Gagal mencatat absensi";
-            }
-        }
-    } else {
-        $_SESSION['error'] = "NIS tidak ditemukan";
+    // Add debugging
+    if ($result === false) {
+        $_SESSION['error'] = "Database error: " . $conn->error;
+        header("Location: absen_siswa.php");
+        exit;
     }
+
+    if ($result->num_rows === 0) {
+        // Add debugging information
+        $_SESSION['error'] = "Nama siswa tidak ditemukan: '$nama_siswa'. Pastikan nama sesuai dengan daftar yang tersedia.";
+        header("Location: absen_siswa.php");
+        exit;
+    }
+
+    // Get student ID from nama
+    $siswa = $result->fetch_assoc();
+    $siswa_id = $siswa['id'];
     
+    // Check if manual date is provided, otherwise use system date
+    $tanggal = !empty($_POST['tanggal']) ? $_POST['tanggal'] : date('Y-m-d');
+    $jam_masuk = date('H:i:s');
+    
+    // Check if student already has attendance for the selected date
+    $check = $conn->prepare("SELECT id FROM absensis WHERE siswa_id = ? AND tanggal = ?");
+    $check->bind_param("is", $siswa_id, $tanggal);
+    $check->execute();
+    $existing = $check->get_result();
+    
+    if ($existing->num_rows > 0) {
+        $_SESSION['error'] = "Siswa sudah diabsen pada tanggal tersebut";
+    } else {
+        $insert = $conn->prepare("INSERT INTO absensis (siswa_id, tanggal, jam_masuk, status, keterangan) VALUES (?, ?, ?, ?, ?)");
+        $insert->bind_param("issss", $siswa_id, $tanggal, $jam_masuk, $status, $keterangan);
+        
+        if ($insert->execute()) {
+            $_SESSION['success'] = "Absensi berhasil dicatat pada tanggal " . date('d-m-Y', strtotime($tanggal));
+        } else {
+            $_SESSION['error'] = "Gagal mencatat absensi";
+        }
+    }
     header("Location: absen_siswa.php");
     exit;
 }
 //batas code
 // Regular query for displaying data
+$today = date('Y-m-d');
 $query = "SELECT a.*, s.nama, s.nis
           FROM absensis a
           LEFT JOIN siswas s ON a.siswa_id = s.id 
-          ORDER BY a.tanggal DESC, a.jam_masuk DESC";
+          WHERE DATE(a.tanggal) = '$today'
+          ORDER BY a.jam_masuk DESC";
 $result = $conn->query($query);
 
-// Get attendance statistics
+// Get attendance statistics for today only
 $stats_query = "SELECT 
     SUM(CASE WHEN status = 'Hadir' THEN 1 ELSE 0 END) as total_hadir,
     SUM(CASE WHEN status = 'Sakit' THEN 1 ELSE 0 END) as total_sakit,
     SUM(CASE WHEN status = 'Izin' THEN 1 ELSE 0 END) as total_izin,
     SUM(CASE WHEN status = 'Alpha' THEN 1 ELSE 0 END) as total_alpha
-    FROM absensis";
+    FROM absensis 
+    WHERE DATE(tanggal) = '$today'";
 $stats_result = $conn->query($stats_query);
 $stats = $stats_result->fetch_assoc();
+
+// Add this code after database connection and before form handling
+$query_siswa = "SELECT nama FROM siswas ORDER BY nama ASC";
+$result_siswa = $conn->query($query_siswa);
+$daftar_siswa = [];
+while($row = $result_siswa->fetch_assoc()) {
+    $daftar_siswa[] = $row['nama'];
+}
+
 // Close the database connection
 ?>
 <!DOCTYPE html>
@@ -147,7 +171,7 @@ $stats = $stats_result->fetch_assoc();
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview">
           <li class="nav-item">
-            <a href="dashboard.php" class="nav-link">
+            <a href="index.php" class="nav-link">
               <i class="nav-icon fas fa-tachometer-alt"></i>
               <p>Dashboard</p>
             </a>
@@ -180,8 +204,13 @@ $stats = $stats_result->fetch_assoc();
       <div class="card-body">
         <form method="POST" class="row g-3">
           <div class="col-md-3">
-            <label class="form-label">NIS Siswa</label>
-            <input type="text" name="nis" class="form-control" required>
+            <label class="form-label">Nama Siswa</label>
+            <input type="text" name="nama_siswa" class="form-control" list="daftarSiswa" required autocomplete="off">
+            <datalist id="daftarSiswa">
+                <?php foreach($daftar_siswa as $nama): ?>
+                    <option value="<?php echo htmlspecialchars($nama); ?>">
+                <?php endforeach; ?>
+            </datalist>
           </div>
           <div class="col-md-3">
             <label class="form-label">Status</label>
@@ -195,6 +224,10 @@ $stats = $stats_result->fetch_assoc();
           <div class="col-md-4">
             <label class="form-label">Keterangan</label>
             <input type="text" name="keterangan" class="form-control">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Tanggal</label>
+            <input type="date" name="tanggal" class="form-control" value="<?= date('Y-m-d') ?>">
           </div>
           <div class="col-md-2">
             <label class="form-label">&nbsp;</label>
@@ -328,6 +361,24 @@ $stats = $stats_result->fetch_assoc();
 <script src="assets/AdminLTE/plugins/jquery/jquery.min.js"></script>
 <script src="assets/AdminLTE/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="assets/AdminLTE/dist/js/adminlte.min.js"></script>
-
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    var input = document.querySelector('input[name="nama_siswa"]');
+    var datalist = document.getElementById('daftarSiswa');
+    var valid = false;
+    
+    for(var i = 0; i < datalist.options.length; i++) {
+        if(input.value === datalist.options[i].value) {
+            valid = true;
+            break;
+        }
+    }
+    
+    if(!valid) {
+        e.preventDefault();
+        alert('Pilih nama siswa dari daftar yang tersedia');
+    }
+});
+</script>
 </body>
 </html>

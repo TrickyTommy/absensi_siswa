@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Cek password hash
         if (password_verify($input_pass, $user['password'])) {
             $_SESSION['user'] = $user['name']; // atau bisa simpan email, id, dsb.
-            header("Location: dashboard.php");
+            header("Location: index.php");
             exit;
         } else {
             echo "<script>alert('Password salah!'); window.location='login.php';</script>";

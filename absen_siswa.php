@@ -68,28 +68,56 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !isset($_POST['update'])) {
         if ($existing->num_rows > 0) {
             $_SESSION['error'] = "Siswa sudah diabsen hari ini";
         } else {
+            // Get student name
+            $stmt = $conn->prepare("SELECT nama FROM siswas WHERE id = ?");
+            $stmt->bind_param("i", $siswa_id);
+            $stmt->execute();
+            $nama_result = $stmt->get_result();
+            $nama_siswa = $nama_result->fetch_assoc()['nama'];
+
             $insert = $conn->prepare("INSERT INTO absensis (siswa_id, tanggal, jam_masuk, status, keterangan) VALUES (?, ?, ?, ?, ?)");
             $insert->bind_param("issss", $siswa_id, $tanggal, $jam_masuk, $status, $keterangan);
             
             if ($insert->execute()) {
-                $_SESSION['success'] = "Absensi berhasil dicatat pada jam " . $jam_masuk;
+          $_SESSION['success'] = "Absensi untuk $nama_siswa berhasil dicatat pada jam " . $jam_masuk;
             } else {
-                $_SESSION['error'] = "Gagal mencatat absensi";
+          $_SESSION['error'] = "Gagal mencatat absensi";
             }
         }
-    } else {
+          } else {
         $_SESSION['error'] = "NIS tidak ditemukan";
-    }
-    
-    header("Location: absen_siswa.php");
-    exit;
+          }
+          
+          header("Location: absen_siswa.php");
+          exit;
 }
-//batas code
+
+// Get filter values
+$filter_date = isset($_GET['filter_date']) ? $_GET['filter_date'] : '';
+$filter_month = isset($_GET['filter_month']) ? $_GET['filter_month'] : '';
+
+// Set default filter to current date if no filter is set
+if (empty($filter_date) && empty($filter_month)) {
+    $filter_date = date('Y-m-d');
+}
+
 // Regular query for displaying data
 $query = "SELECT a.*, s.nama, s.nis
           FROM absensis a
           LEFT JOIN siswas s ON a.siswa_id = s.id 
-          ORDER BY a.tanggal DESC, a.jam_masuk DESC";
+          WHERE 1=1";
+
+// Add date filter condition
+if ($filter_date) {
+    $query .= " AND DATE(a.tanggal) = '$filter_date'";
+}
+
+// Add month filter condition
+if ($filter_month) {
+    $query .= " AND DATE_FORMAT(a.tanggal, '%Y-%m') = '$filter_month'";
+}
+
+$query .= " ORDER BY a.tanggal DESC, a.jam_masuk DESC";
 $result = $conn->query($query);
 
 // Get attendance statistics
@@ -98,7 +126,17 @@ $stats_query = "SELECT
     SUM(CASE WHEN status = 'Sakit' THEN 1 ELSE 0 END) as total_sakit,
     SUM(CASE WHEN status = 'Izin' THEN 1 ELSE 0 END) as total_izin,
     SUM(CASE WHEN status = 'Alpha' THEN 1 ELSE 0 END) as total_alpha
-    FROM absensis";
+    FROM absensis WHERE 1=1";
+
+// Add the same date filters to statistics query
+if ($filter_date) {
+    $stats_query .= " AND DATE(tanggal) = '$filter_date'";
+}
+
+if ($filter_month) {
+    $stats_query .= " AND DATE_FORMAT(tanggal, '%Y-%m') = '$filter_month'";
+}
+
 $stats_result = $conn->query($stats_query);
 $stats = $stats_result->fetch_assoc();
 // Close the database connection
@@ -151,11 +189,44 @@ $stats = $stats_result->fetch_assoc();
         <div class="col-md-3">
         <label class="form-label">&nbsp;</label>
         <button type="submit" class="btn btn-primary w-100">Simpan Absen</button>
-      </div>
+        </div>
+        <div class="col-md-3">
+        <label class="form-label">&nbsp;</label>
+        <button type="submit" class="btn btn-primary w-100" >
+          <a href="tambah_absen.php" style="color:white; ">Tambah Absen Manual</a>
+        </button>
+        </div>
       </form>
-      <div class="mt-3">
-        <a href="tambah_absen.php" class="btn btn-primary">Tambah Absen Manual</a>
       </div>
+    </div>
+
+    <!-- Add Filter Form -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <form method="GET" class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Filter per Hari</label>
+            <input type="date" name="filter_date" class="form-control" value="<?= $filter_date ?>">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Filter per Bulan</label>
+            <input type="month" name="filter_month" class="form-control" value="<?= $filter_month ?>">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">&nbsp;</label>
+            <div>
+              <button type="submit" class="btn btn-primary">Filter</button>
+              <a href="absen_siswa.php" class="btn btn-secondary">Reset</a>
+               <!-- Export to txt -->
+              <?php if($filter_date): ?>
+                <a href="generate_txt.php?tanggal=<?= $filter_date ?>" class="btn btn-info">
+                  <i class="fas fa-file-alt"></i> Export TXT
+                </a>
+              <?php endif; ?>
+           <!--  -->
+            </div>
+          </div>
+        </form>
       </div>
     </div>
 
