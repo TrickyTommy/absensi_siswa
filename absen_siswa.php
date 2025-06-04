@@ -93,48 +93,66 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !isset($_POST['update'])) {
 }
 
 // Get filter values
-$filter_date = isset($_GET['filter_date']) ? $_GET['filter_date'] : '';
+$current_date = date('Y-m-d');
+$filter_date = isset($_GET['filter_date']) ? $_GET['filter_date'] : $current_date;
 $filter_month = isset($_GET['filter_month']) ? $_GET['filter_month'] : '';
+$filter_kelas = isset($_GET['filter_kelas']) ? $_GET['filter_kelas'] : '';
 
-// Set default filter to current date if no filter is set
-if (empty($filter_date) && empty($filter_month)) {
-    $filter_date = date('Y-m-d');
-}
+// Get unique classes for filter dropdown
+$kelas_query = "SELECT DISTINCT kelas FROM siswas ORDER BY kelas";
+$kelas_result = $conn->query($kelas_query);
 
-// Regular query for displaying data
-$query = "SELECT a.*, s.nama, s.nis
+// Modify the main query to include kelas and default to current date, ordered by status
+$query = "SELECT a.*, s.nama, s.nis, s.kelas
           FROM absensis a
           LEFT JOIN siswas s ON a.siswa_id = s.id 
-          WHERE 1=1";
+          WHERE DATE(a.tanggal) = '$filter_date'";
 
-// Add date filter condition
-if ($filter_date) {
-    $query .= " AND DATE(a.tanggal) = '$filter_date'";
+// Add class filter condition
+if ($filter_kelas) {
+    $query .= " AND s.kelas = '$filter_kelas'";
 }
 
-// Add month filter condition
+// Remove the date filter condition since it's now in the base query
 if ($filter_month) {
-    $query .= " AND DATE_FORMAT(a.tanggal, '%Y-%m') = '$filter_month'";
+    $query = str_replace("WHERE DATE(a.tanggal) = '$filter_date'", "WHERE DATE_FORMAT(a.tanggal, '%Y-%m') = '$filter_month'", $query);
 }
 
-$query .= " ORDER BY a.tanggal DESC, a.jam_masuk DESC";
+// Order by status with custom ordering to show absent students first
+$query .= " ORDER BY 
+           CASE 
+               WHEN a.status = 'Alpha' THEN 1
+               WHEN a.status = 'Sakit' THEN 2
+               WHEN a.status = 'Izin' THEN 3
+               WHEN a.status = 'Hadir' THEN 4
+           END, 
+           s.kelas, 
+           a.jam_masuk DESC";
 $result = $conn->query($query);
 
 // Get attendance statistics
 $stats_query = "SELECT 
-    SUM(CASE WHEN status = 'Hadir' THEN 1 ELSE 0 END) as total_hadir,
-    SUM(CASE WHEN status = 'Sakit' THEN 1 ELSE 0 END) as total_sakit,
-    SUM(CASE WHEN status = 'Izin' THEN 1 ELSE 0 END) as total_izin,
-    SUM(CASE WHEN status = 'Alpha' THEN 1 ELSE 0 END) as total_alpha
-    FROM absensis WHERE 1=1";
+    COUNT(DISTINCT s.id) as total_siswa,
+    SUM(CASE WHEN a.status = 'Hadir' THEN 1 ELSE 0 END) as total_hadir,
+    SUM(CASE WHEN a.status = 'Sakit' THEN 1 ELSE 0 END) as total_sakit,
+    SUM(CASE WHEN a.status = 'Izin' THEN 1 ELSE 0 END) as total_izin,
+    SUM(CASE WHEN a.status = 'Alpha' THEN 1 ELSE 0 END) as total_alpha
+    FROM siswas s
+    LEFT JOIN absensis a ON s.id = a.siswa_id AND 1=1";
 
-// Add the same date filters to statistics query
+// Add date filter if specified
 if ($filter_date) {
-    $stats_query .= " AND DATE(tanggal) = '$filter_date'";
+    $stats_query .= " AND DATE(a.tanggal) = '$filter_date'";
 }
 
+// Add month filter if specified
 if ($filter_month) {
-    $stats_query .= " AND DATE_FORMAT(tanggal, '%Y-%m') = '$filter_month'";
+    $stats_query .= " AND DATE_FORMAT(a.tanggal, '%Y-%m') = '$filter_month'";
+}
+
+// Add class filter if specified
+if ($filter_kelas) {
+    $stats_query .= " WHERE s.kelas = '$filter_kelas'";
 }
 
 $stats_result = $conn->query($stats_query);
@@ -193,7 +211,7 @@ $stats = $stats_result->fetch_assoc();
         <div class="col-md-3">
         <label class="form-label">&nbsp;</label>
         <button type="submit" class="btn btn-primary w-100" >
-          <a href="tambah_absen.php" style="color:white; ">Tambah Absen Manual</a>
+          <a href="tambah_absen.php" style="color:white; width:100%;">Tambah Absen Manual</a>
         </button>
         </div>
       </form>
@@ -204,26 +222,35 @@ $stats = $stats_result->fetch_assoc();
     <div class="card mb-4">
       <div class="card-body">
         <form method="GET" class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label">Filter per Hari</label>
             <input type="date" name="filter_date" class="form-control" value="<?= $filter_date ?>">
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label">Filter per Bulan</label>
             <input type="month" name="filter_month" class="form-control" value="<?= $filter_month ?>">
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
+            <label class="form-label">Filter Kelas</label>
+            <select name="filter_kelas" class="form-control">
+              <option value="">Semua Kelas</option>
+              <?php while($kelas = $kelas_result->fetch_assoc()): ?>
+                <option value="<?= $kelas['kelas'] ?>" <?= $filter_kelas === $kelas['kelas'] ? 'selected' : '' ?>>
+                  <?= $kelas['kelas'] ?>
+                </option>
+              <?php endwhile; ?>
+            </select>
+          </div>
+          <div class="col-md-3">
             <label class="form-label">&nbsp;</label>
             <div>
               <button type="submit" class="btn btn-primary">Filter</button>
               <a href="absen_siswa.php" class="btn btn-secondary">Reset</a>
-               <!-- Export to txt -->
               <?php if($filter_date): ?>
                 <a href="generate_txt.php?tanggal=<?= $filter_date ?>" class="btn btn-info">
                   <i class="fas fa-file-alt"></i> Export TXT
                 </a>
               <?php endif; ?>
-           <!--  -->
             </div>
           </div>
         </form>
@@ -249,6 +276,17 @@ $stats = $stats_result->fetch_assoc();
 
     <!-- Add Statistics Cards -->
     <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="small-box bg-primary">
+                <div class="inner">
+                    <h3><?= $stats['total_siswa'] ?? 0 ?></h3>
+                    <p>Total Siswa <?= $filter_kelas ? "Kelas " . $filter_kelas : "" ?></p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
         <div class="col-md-3">
             <div class="small-box bg-success">
                 <div class="inner">
@@ -303,6 +341,7 @@ $stats = $stats_result->fetch_assoc();
             <th>Tanggal</th>
             <th>Jam Masuk</th>
             <th>Nama Siswa</th>
+            <th>Kelas</th>
             <th>Status</th>
             <th>Keterangan</th>
             <th>Aksi</th>
@@ -311,12 +350,21 @@ $stats = $stats_result->fetch_assoc();
         <tbody>
           <?php
           $no = 1;
+          // In the table display section, add status color highlighting
           while ($row = $result->fetch_assoc()) {
-              echo "<tr>
+              $status_color = '';
+              switch($row['status']) {
+                  case 'Alpha': $status_color = 'table-danger'; break;
+                  case 'Sakit': $status_color = 'table-warning'; break;
+                  case 'Izin': $status_color = 'table-info'; break;
+              }
+              
+              echo "<tr class='{$status_color}'>
                   <td>" . $no++ . "</td>
                   <td>" . date('d-m-Y', strtotime($row['tanggal'])) . "</td>
                   <td>{$row['jam_masuk']}</td>
                   <td>{$row['nama']}</td>
+                  <td>{$row['kelas']}</td>
                   <td>{$row['status']}</td>
                   <td>{$row['keterangan']}</td>
                   <td>
